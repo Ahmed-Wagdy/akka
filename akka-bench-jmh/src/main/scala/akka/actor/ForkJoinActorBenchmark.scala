@@ -38,8 +38,7 @@ class ForkJoinActorBenchmark {
 
     require(
       Runtime.getRuntime.availableProcessors == cores,
-      s"Update the cores constant to ${Runtime.getRuntime.availableProcessors}"
-    )
+      s"Update the cores constant to ${Runtime.getRuntime.availableProcessors}")
 
     val mailboxConf = mailbox match {
       case "default" => ""
@@ -64,8 +63,7 @@ class ForkJoinActorBenchmark {
              $mailboxConf
            }
          }
-      """
-    ))
+      """))
   }
 
   @TearDown(Level.Trial)
