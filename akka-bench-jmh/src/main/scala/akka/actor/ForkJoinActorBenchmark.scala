@@ -22,7 +22,7 @@ import akka.actor.SupervisorSpec.PingPongActor
 class ForkJoinActorBenchmark {
   import ForkJoinActorBenchmark._
 
-  @Param(Array("5", "25", "50"))
+  @Param(Array("25"))
   var tpt = 0
 
   @Param(Array(coresStr)) // coresStr, cores2xStr, cores4xStr
@@ -30,6 +30,14 @@ class ForkJoinActorBenchmark {
 
   @Param(Array("SingleConsumerOnlyUnboundedMailbox")) //"default"
   var mailbox = ""
+
+  //@Param(Array("any", "same-core, any", "same-socket, any", "different-core, any", "different-socket, any"))
+  @Param(Array("same-core, any", "same-socket, any"))
+  var cpuAffinityStrategy = ""
+
+  //@Param(Array("sleep", "yield", "busy-spin"))
+  @Param(Array("yield"))
+  var waitingStrat = ""
 
   implicit var system: ActorSystem = _
 
@@ -60,6 +68,20 @@ class ForkJoinActorBenchmark {
                }
                throughput = $tpt
              }
+
+             affinity-dispatcher {
+               executor = "affinity-pool-executor"
+               affinity-pool-executor {
+                 parallelism-min = $threads
+                 parallelism-factor = 1.0
+                 parallelism-max = $threads
+                 affinity-group-size = 10000
+                 cpu-affinity-strategies = [$cpuAffinityStrategy]
+                 worker-waiting-strategy = $waitingStrat
+               }
+               throughput = $tpt
+             }
+
              $mailboxConf
            }
          }
@@ -198,10 +220,10 @@ object ForkJoinActorBenchmark {
 
   // Constants because they are used in annotations
   // update according to cpu
-  final val cores = 24
-  final val coresStr = "24"
-  final val cores2xStr = "48"
-  final val cores4xStr = "96"
+  final val cores = 48
+  final val coresStr = "48"
+  final val cores2xStr = "96"
+  final val cores4xStr = "384"
   // 2 actors per pair
   final val moreThanCoresActorPairs = cores
   final val lessThanCoresActorPairs = cores / 4
@@ -220,7 +242,7 @@ object ForkJoinActorBenchmark {
   }
 
   def pingPongProps(latch: CountDownLatch): Props =
-    Props(new PingPong(latch))
+    Props(new PingPong(latch)).withDispatcher("akka.actor.affinity-dispatcher")
 
   class PingPong(latch: CountDownLatch) extends Actor {
     var left = messages / 2
